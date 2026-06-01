@@ -137,6 +137,16 @@ class MeasurementSession:
         self.offset = float(statistics.median(filtered))
         return self.offset
 
+    def read_weight(self):
+        """Baca berat aktual loadcell sekali (gram). Untuk polling autopilot.
+
+        Lock dikelola pemanggil (web engine). Reuse read_actual_weight_once
+        agar konsisten dengan jalur pengukuran.
+        """
+        data = self._t14.read_actual_weight_once(self.hx, self.offset)
+        return data["actual_weight_g"]
+
+
     def _compute_frame(self):
         """Hitung satu frame -> current_data dict, atau None bila belum valid.
 
