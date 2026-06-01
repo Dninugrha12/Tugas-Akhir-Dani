@@ -18,10 +18,20 @@ if MODULES_DIR not in sys.path:
 
 from hx711 import HX711
 
+# =====================================================
+# IMPORT TAHAP 15 - SERVO PENDORONG
+# =====================================================
+from tahap15_servo_trigger import (
+    setup_servo,
+    proses_dorong_paket,
+    cleanup_servo
+)
+
 
 # =====================================================
 # TAHAP 14 - INTEGRATED CHARGEABLE WEIGHT
 # Kamera + Ultrasonik + Loadcell + Chargeable
+# + Trigger Servo Pendorong Tahap 15
 # =====================================================
 
 FIXED_CAMERA_DEVICE = "/dev/video0"
@@ -584,17 +594,24 @@ def make_frozen_frame(warped, scale, sensor_point, measurement_box, final_data):
 def main():
     print("=====================================================")
     print("TAHAP 14 - INTEGRATED CHARGEABLE WEIGHT")
-    print("1x RUN: Kamera + Ultrasonik + Loadcell + Chargeable")
+    print("1x RUN: Kamera + Ultrasonik + Loadcell + Chargeable + Servo Pendorong")
     print("=====================================================")
     print("ATURAN FINAL:")
     print("- Paket di bawah 50 gram dianggap tidak terbaca.")
-    print("- Setelah data final tersimpan, tampilan nilai dikunci/freeze.")
+    print("- Setelah data final tersimpan, servo pendorong tahap 15 aktif otomatis.")
+    print("- Setelah servo mendorong paket, sistem menunggu loadcell < 50 gram.")
     print("=====================================================")
 
     cap = None
 
     try:
         cvsys.setup_gpio()
+
+        # =====================================================
+        # SETUP SERVO PENDORONG TAHAP 15
+        # =====================================================
+        setup_servo()
+
         ultrasonic_base_cm = cvsys.load_ultrasonic_base_distance()
 
         print(f"Base ultrasonik : {ultrasonic_base_cm:.3f} cm")
@@ -653,8 +670,8 @@ def main():
         print("2. Paket harus memiliki berat aktual minimal 50 gram.")
         print("3. Pastikan bagian atas paket berada di bawah titik sensor merah.")
         print("4. Tunggu sampai status DATA FINAL TERSIMPAN.")
-        print("5. Saat data tersimpan, angka di layar akan freeze.")
-        print("6. Ambil paket untuk reset.")
+        print("5. Setelah data final tersimpan, servo akan mendorong paket otomatis.")
+        print("6. Setelah paket keluar dari loadcell, sistem siap paket baru.")
         print("7. Tekan Q untuk keluar.")
         print("=====================================================")
 
@@ -705,7 +722,7 @@ def main():
             # =====================================================
             # MODE SETELAH DATA FINAL TERSIMPAN
             # Tampilan nilai P/L/T/Berat/Chargeable dikunci.
-            # Program hanya memantau apakah paket sudah diangkat.
+            # Program hanya memantau apakah paket sudah keluar dari loadcell.
             # =====================================================
             if state == "OBJECT_SAVED_WAIT_REMOVAL":
                 if actual_weight_g < MIN_VALID_ACTUAL_WEIGHT_G:
@@ -719,10 +736,10 @@ def main():
                     display = annotated.copy()
 
                 if actual_weight_g < MIN_VALID_ACTUAL_WEIGHT_G:
-                    status_text = f"Status: MENUNGGU PAKET DIANGKAT {remove_counter}/{REMOVE_CONFIRM_FRAMES}"
+                    status_text = f"Status: MENUNGGU AREA KOSONG {remove_counter}/{REMOVE_CONFIRM_FRAMES}"
                     status_color = (0, 255, 255)
                 else:
-                    status_text = "Status: DATA FINAL TERSIMPAN - AMBIL PAKET"
+                    status_text = "Status: PAKET SUDAH DIDORONG - MENUNGGU LOADCELL KOSONG"
                     status_color = (0, 255, 0)
 
                 draw_status(display, status_text, status_color)
@@ -742,7 +759,7 @@ def main():
                     remove_counter = 0
                     frozen_base_frame = None
                     frozen_mask = None
-                    print("Paket sudah diangkat. Sistem siap paket baru.")
+                    print("Area loadcell sudah kosong. Sistem siap paket baru.")
 
                 continue
 
@@ -997,7 +1014,7 @@ def main():
 
                     draw_status(
                         file_frame,
-                        "Status: DATA FINAL TERSIMPAN - AMBIL PAKET",
+                        "Status: DATA FINAL TERSIMPAN - SERVO MENDORONG PAKET",
                         (0, 255, 0)
                     )
 
@@ -1006,6 +1023,27 @@ def main():
                         frozen_mask,
                         final_result
                     )
+
+                    # =====================================================
+                    # TRIGGER TAHAP 15 - SERVO PENDORONG
+                    # Servo aktif setelah data final berhasil tersimpan.
+                    # =====================================================
+                    print("")
+                    print("=====================================================")
+                    print("MEMANGGIL TAHAP 15 - SERVO PENDORONG")
+                    print("=====================================================")
+
+                    hasil_servo = proses_dorong_paket(
+                        final_result["chargeable_weight_g"]
+                    )
+
+                    if hasil_servo["status"]:
+                        print(f"Servo berhasil mendorong paket layanan {hasil_servo['layanan']}.")
+                    else:
+                        print(f"Servo tidak aktif: {hasil_servo['pesan']}")
+
+                    print("=====================================================")
+                    print("")
 
                     saved_count += 1
                     state = "OBJECT_SAVED_WAIT_REMOVAL"
@@ -1028,7 +1066,8 @@ def main():
                     print("")
                     print(f"File latest          : {LATEST_JSON}")
                     print(f"File archive         : {archive_json}")
-                    print("Silakan ambil paket dari platform.")
+                    print("Paket sudah didorong oleh servo.")
+                    print("Menunggu area loadcell kosong.")
                     print("=====================================================")
                     print("")
 
@@ -1054,6 +1093,11 @@ def main():
             cap.release()
 
         cv2.destroyAllWindows()
+
+        try:
+            cleanup_servo()
+        except Exception:
+            pass
 
         try:
             cvsys.cleanup_gpio()

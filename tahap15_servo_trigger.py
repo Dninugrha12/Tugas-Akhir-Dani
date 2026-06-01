@@ -2,88 +2,103 @@ import RPi.GPIO as GPIO
 import time
 
 # ==================================================
-# PROGRAM UJI SERVO PENDORONG BERDASARKAN LAYANAN
-# Target waktu adalah TOTAL dorong + kembali
+# TAHAP 15: SERVO TRIGGER PENDORONG PAKET
+# ==================================================
+# File ini TIDAK dijalankan langsung.
+# File ini dipanggil oleh tahap14_integrated_chargeable.py
+# setelah chargeable_weight_g valid dan data final tersimpan.
 #
+# Posisi servo:
 # Standby = 180 derajat
 # Dorong  = 90 derajat
 #
-# Reguler total = 1.2 detik
-# Express total = 1.5 detik
-# Kargo   total = 1.8 detik
+# Parameter layanan:
+# Reguler : w <= 700 g        total dorong+kembali = 1.2 detik
+# Express : 700 < w <= 1300 g total dorong+kembali = 1.5 detik
+# Kargo   : 1300 < w <= 2000 g total dorong+kembali = 1.8 detik
 # ==================================================
 
-# ------------------------------
-# Konfigurasi GPIO
-# ------------------------------
-SERVO_PIN = 18  # GPIO18 / pin fisik 12
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(SERVO_PIN, GPIO.OUT)
-
-servo = GPIO.PWM(SERVO_PIN, 50)
-servo.start(0)
-
-# ------------------------------
-# Posisi servo
-# ------------------------------
+# ==================================================
+# KONFIGURASI SERVO
+# ==================================================
+SERVO_PIN = 18          # GPIO18 / pin fisik 12
 SUDUT_STANDBY = 180
 SUDUT_DORONG = 90
-
-# Step gerakan servo
 STEP_SERVO = 5
 
+servo = None
+servo_ready = False
+
 
 # ==================================================
-# Fungsi konversi sudut ke duty cycle
+# KONVERSI SUDUT KE DUTY CYCLE
 # ==================================================
 def sudut_ke_duty_cycle(sudut):
+    """
+    Mengubah sudut servo 0-180 derajat menjadi duty cycle.
+    Rumus umum servo standar:
+    0 derajat   sekitar duty cycle 2%
+    90 derajat  sekitar duty cycle 7%
+    180 derajat sekitar duty cycle 12%
+    """
     return 2 + (sudut / 18)
 
 
 # ==================================================
-# Fungsi menentukan layanan
+# SETUP SERVO
 # ==================================================
-def tentukan_layanan(chargeable_weight):
+def setup_servo():
     """
-    Menentukan layanan berdasarkan chargeable weight dalam gram.
-    Target waktu adalah total dorong + kembali.
+    Inisialisasi GPIO dan servo.
+    Fungsi ini dipanggil sekali di awal program tahap 14.
     """
 
-    if chargeable_weight <= 0:
-        return None
+    global servo, servo_ready
 
-    if chargeable_weight <= 700:
-        return {
-            "nama": "REGULER",
-            "total_waktu": 1.2
-        }
+    if servo_ready:
+        return
 
-    elif chargeable_weight <= 1300:
-        return {
-            "nama": "EXPRESS",
-            "total_waktu": 1.5
-        }
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(SERVO_PIN, GPIO.OUT)
 
-    elif chargeable_weight <= 2000:
-        return {
-            "nama": "KARGO",
-            "total_waktu": 1.8
-        }
+    servo = GPIO.PWM(SERVO_PIN, 50)
+    servo.start(0)
 
-    else:
-        return {
-            "nama": "MELEBIHI BATAS",
-            "total_waktu": None
-        }
+    servo_ready = True
+
+    print("Mengatur servo pendorong ke posisi standby 180°...")
+    servo_ke_standby_awal()
+    print("Servo pendorong siap.")
+
+
+def servo_ke_standby_awal():
+    """
+    Mengarahkan servo ke posisi standby.
+    """
+
+    global servo
+
+    if servo is None:
+        print("Servo belum di-setup.")
+        return
+
+    servo.ChangeDutyCycle(sudut_ke_duty_cycle(SUDUT_STANDBY))
+    time.sleep(0.5)
+    servo.ChangeDutyCycle(0)
 
 
 # ==================================================
-# Fungsi hitung delay
+# HITUNG DELAY BERDASARKAN TARGET WAKTU
 # ==================================================
 def hitung_delay(sudut_awal, sudut_akhir, step, target_waktu_gerak):
     """
-    Menghitung delay per step.
+    Menghitung delay per step agar total waktu gerak
+    mendekati target waktu yang ditentukan.
+
+    Rumus:
+    jumlah_langkah = selisih_sudut / step
+    delay = target_waktu_gerak / jumlah_langkah
     """
 
     selisih_sudut = abs(sudut_awal - sudut_akhir)
@@ -92,18 +107,23 @@ def hitung_delay(sudut_awal, sudut_akhir, step, target_waktu_gerak):
     if jumlah_langkah == 0:
         return 0
 
-    delay = target_waktu_gerak / jumlah_langkah
-    return delay
+    return target_waktu_gerak / jumlah_langkah
 
 
 # ==================================================
-# Fungsi gerak servo bertahap
+# GERAK SERVO BERTAHAP
 # ==================================================
 def gerak_servo_bertahap(sudut_awal, sudut_akhir, step, delay):
     """
-    Menggerakkan servo dari sudut_awal ke sudut_akhir
-    tanpa print per step agar waktu lebih mendekati target.
+    Menggerakkan servo dari sudut_awal ke sudut_akhir secara bertahap.
+    Fungsi ini dibuat tanpa print per step agar gerakan lebih mendekati target waktu.
     """
+
+    global servo
+
+    if servo is None:
+        print("Servo belum di-setup.")
+        return 0
 
     waktu_mulai = time.monotonic()
 
@@ -125,57 +145,97 @@ def gerak_servo_bertahap(sudut_awal, sudut_akhir, step, delay):
         servo.ChangeDutyCycle(sudut_ke_duty_cycle(sudut_awal))
         time.sleep(delay)
 
-    # Pastikan servo sampai sudut akhir
+    # Pastikan servo mencapai sudut akhir
     servo.ChangeDutyCycle(sudut_ke_duty_cycle(sudut_akhir))
-
-    # Delay kecil agar servo sempat menerima posisi akhir
     time.sleep(0.03)
 
-    # Matikan duty cycle agar servo tidak getar
+    # Duty cycle dimatikan untuk mengurangi getaran servo
     servo.ChangeDutyCycle(0)
 
     waktu_selesai = time.monotonic()
-    durasi_aktual = waktu_selesai - waktu_mulai
-
-    return durasi_aktual
+    return waktu_selesai - waktu_mulai
 
 
 # ==================================================
-# Fungsi standby awal
+# TENTUKAN LAYANAN
 # ==================================================
-def servo_ke_standby_awal():
-    print("Mengatur servo ke posisi standby 180°...")
-    servo.ChangeDutyCycle(sudut_ke_duty_cycle(SUDUT_STANDBY))
-    time.sleep(0.5)
-    servo.ChangeDutyCycle(0)
-    print("Servo siap di posisi standby.")
+def tentukan_layanan(chargeable_weight_g):
+    """
+    Menentukan layanan berdasarkan chargeable weight dalam gram.
+    """
+
+    if chargeable_weight_g <= 0:
+        return {
+            "nama": "TIDAK VALID",
+            "total_waktu": None
+        }
+
+    if chargeable_weight_g <= 700:
+        return {
+            "nama": "REGULER",
+            "total_waktu": 1.2
+        }
+
+    elif chargeable_weight_g <= 1300:
+        return {
+            "nama": "EXPRESS",
+            "total_waktu": 1.5
+        }
+
+    elif chargeable_weight_g <= 2000:
+        return {
+            "nama": "KARGO",
+            "total_waktu": 1.8
+        }
+
+    else:
+        return {
+            "nama": "MELEBIHI BATAS",
+            "total_waktu": None
+        }
 
 
 # ==================================================
-# Fungsi proses dorong paket
+# PROSES DORONG PAKET
 # ==================================================
-def proses_dorong_paket(chargeable_weight):
-    layanan = tentukan_layanan(chargeable_weight)
+def proses_dorong_paket(chargeable_weight_g):
+    """
+    Fungsi utama tahap 15.
+    Fungsi ini dipanggil dari tahap 14 setelah chargeable_weight_g valid.
 
-    if layanan is None:
-        print("Chargeable weight tidak valid. Nilai harus lebih dari 0 gram.")
-        return
+    Alur:
+    1. Terima chargeable_weight_g
+    2. Tentukan layanan
+    3. Hitung waktu dorong dan waktu kembali
+    4. Servo bergerak 180° ke 90°
+    5. Servo kembali 90° ke 180°
+    """
+
+    if not servo_ready:
+        setup_servo()
+
+    layanan = tentukan_layanan(chargeable_weight_g)
+
+    if layanan["nama"] == "TIDAK VALID":
+        print("Chargeable weight tidak valid. Servo tidak diaktifkan.")
+        return {
+            "status": False,
+            "layanan": layanan["nama"],
+            "pesan": "Chargeable weight tidak valid"
+        }
 
     if layanan["nama"] == "MELEBIHI BATAS":
-        print("\n====================================")
-        print("HASIL KLASIFIKASI PAKET")
-        print("====================================")
-        print(f"Chargeable Weight : {chargeable_weight:.1f} gram")
-        print("Status            : MELEBIHI BATAS")
-        print("Keterangan        : Paket melebihi kapasitas maksimum 2000 gram.")
-        print("Servo             : Tidak diaktifkan.")
-        print("====================================")
-        return
+        print("Paket melebihi batas 2000 gram. Servo tidak diaktifkan.")
+        return {
+            "status": False,
+            "layanan": layanan["nama"],
+            "pesan": "Paket melebihi batas maksimum"
+        }
 
     total_waktu = layanan["total_waktu"]
 
-    # Karena total waktu terdiri dari dorong + kembali,
-    # maka masing-masing gerakan mendapat setengah waktu.
+    # Total waktu dibagi dua:
+    # 50% untuk dorong, 50% untuk kembali standby
     waktu_dorong = total_waktu / 2
     waktu_kembali = total_waktu / 2
 
@@ -193,36 +253,22 @@ def proses_dorong_paket(chargeable_weight):
         waktu_kembali
     )
 
-    jumlah_langkah = abs(SUDUT_STANDBY - SUDUT_DORONG) / STEP_SERVO
-
     print("\n====================================")
-    print("HASIL KLASIFIKASI PAKET")
+    print("TAHAP 15 - SERVO PENDORONG")
     print("====================================")
-    print(f"Chargeable Weight       : {chargeable_weight:.1f} gram")
-    print(f"Layanan                 : {layanan['nama']}")
-    print(f"Sudut Standby           : {SUDUT_STANDBY}°")
-    print(f"Sudut Dorong            : {SUDUT_DORONG}°")
-    print(f"Step Servo              : {STEP_SERVO}°")
-    print(f"Jumlah Langkah          : {jumlah_langkah:.0f} langkah")
-    print("------------------------------------")
-    print(f"Target Total Waktu      : {total_waktu:.2f} detik")
-    print(f"Target Waktu Dorong     : {waktu_dorong:.2f} detik")
-    print(f"Target Waktu Kembali    : {waktu_kembali:.2f} detik")
-    print("------------------------------------")
-    print(f"Delay Dorong per Step   : {delay_dorong:.4f} detik")
-    print(f"Delay Kembali per Step  : {delay_kembali:.4f} detik")
+    print(f"Chargeable Weight : {chargeable_weight_g:.1f} gram")
+    print(f"Layanan           : {layanan['nama']}")
+    print(f"Target Total      : {total_waktu:.2f} detik")
+    print(f"Waktu Dorong      : {waktu_dorong:.2f} detik")
+    print(f"Waktu Kembali     : {waktu_kembali:.2f} detik")
+    print(f"Sudut Standby     : {SUDUT_STANDBY}°")
+    print(f"Sudut Dorong      : {SUDUT_DORONG}°")
+    print(f"Step Servo        : {STEP_SERVO}°")
     print("====================================")
 
-    input("\nTekan ENTER untuk mulai mendorong paket...")
-
-    # Pastikan servo berada di posisi standby
-    servo.ChangeDutyCycle(sudut_ke_duty_cycle(SUDUT_STANDBY))
-    time.sleep(0.1)
-    servo.ChangeDutyCycle(0)
-
-    print("\nServo mulai mendorong paket...")
     waktu_mulai_total = time.monotonic()
 
+    print("Servo mulai mendorong paket...")
     durasi_dorong = gerak_servo_bertahap(
         SUDUT_STANDBY,
         SUDUT_DORONG,
@@ -231,7 +277,6 @@ def proses_dorong_paket(chargeable_weight):
     )
 
     print("Servo kembali ke posisi standby...")
-
     durasi_kembali = gerak_servo_bertahap(
         SUDUT_DORONG,
         SUDUT_STANDBY,
@@ -240,57 +285,45 @@ def proses_dorong_paket(chargeable_weight):
     )
 
     waktu_selesai_total = time.monotonic()
-    durasi_total_aktual = waktu_selesai_total - waktu_mulai_total
+    durasi_total = waktu_selesai_total - waktu_mulai_total
 
     print("\n====================================")
-    print("HASIL WAKTU AKTUAL PROGRAM")
+    print("HASIL GERAK SERVO")
     print("====================================")
-    print(f"Target total waktu        : {total_waktu:.2f} detik")
-    print(f"Durasi aktual dorong      : {durasi_dorong:.2f} detik")
-    print(f"Durasi aktual kembali     : {durasi_kembali:.2f} detik")
-    print(f"Durasi aktual total       : {durasi_total_aktual:.2f} detik")
+    print(f"Durasi dorong aktual  : {durasi_dorong:.2f} detik")
+    print(f"Durasi kembali aktual : {durasi_kembali:.2f} detik")
+    print(f"Durasi total aktual   : {durasi_total:.2f} detik")
+    print("Servo sudah kembali standby.")
     print("====================================")
-    print("Servo sudah kembali standby dan siap untuk paket berikutnya.")
+
+    return {
+        "status": True,
+        "layanan": layanan["nama"],
+        "chargeable_weight_g": chargeable_weight_g,
+        "target_total": total_waktu,
+        "durasi_dorong": durasi_dorong,
+        "durasi_kembali": durasi_kembali,
+        "durasi_total": durasi_total
+    }
 
 
 # ==================================================
-# Program utama
+# CLEANUP SERVO
 # ==================================================
-try:
-    servo_ke_standby_awal()
+def cleanup_servo():
+    """
+    Membersihkan GPIO servo.
+    Fungsi ini dipanggil di bagian finally pada tahap 14.
+    """
 
-    while True:
-        print("\n====================================")
-        print("  UJI SERVO TOTAL WAKTU BERDASARKAN CW")
-        print("====================================")
-        print("Reguler : w <= 700 g       | total 1.2 detik")
-        print("Express : 700 < w <= 1300 g| total 1.5 detik")
-        print("Kargo   : 1300 < w <= 2000 g| total 1.8 detik")
-        print("------------------------------------")
-        print("Posisi standby : 180°")
-        print("Posisi dorong  : 90°")
-        print("------------------------------------")
-        print("Ketik 'q' untuk keluar.")
-        print("------------------------------------")
+    global servo, servo_ready
 
-        data_input = input("Masukkan chargeable weight paket dalam gram: ")
+    if servo is not None:
+        servo.stop()
 
-        if data_input.lower() == "q":
-            print("Program dihentikan oleh pengguna.")
-            break
-
-        try:
-            chargeable_weight = float(data_input)
-            proses_dorong_paket(chargeable_weight)
-
-        except ValueError:
-            print("Input salah. Masukkan angka saja.")
-            print("Contoh input benar: 650, 1000, 1700")
-
-except KeyboardInterrupt:
-    print("\nProgram dihentikan dengan Ctrl+C.")
-
-finally:
-    servo.stop()
     GPIO.cleanup()
-    print("GPIO sudah dibersihkan.")
+
+    servo = None
+    servo_ready = False
+
+    print("GPIO servo tahap 15 sudah dibersihkan.")
