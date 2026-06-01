@@ -41,49 +41,56 @@ class MeasurementSession:
 
     def __init__(self, headless=True):
         self.headless = headless
+        self.cap = None  # diset awal supaya close() aman bila init gagal sebelum kamera dibuka
 
         # Lazy import modul hardware/tahap14 (hanya tersedia di Pi)
         import tahap14_integrated_chargeable as t14
         self._t14 = t14
         self._cvsys = t14.cvsys
 
-        cvsys = self._cvsys
+        try:
+            cvsys = self._cvsys
 
-        # --- GPIO + ultrasonik ---
-        cvsys.setup_gpio()
-        self.ultrasonic_base_cm = cvsys.load_ultrasonic_base_distance()
+            # --- GPIO + ultrasonik ---
+            cvsys.setup_gpio()
+            self.ultrasonic_base_cm = cvsys.load_ultrasonic_base_distance()
 
-        # --- Loadcell ---
-        self.loadcell_calibration = t14.load_loadcell_calibration()
-        self.hx = t14.init_loadcell(self.loadcell_calibration)
-        self.calibration_factor = float(self.loadcell_calibration["calibration_factor"])
-        self.offset_calibration = float(self.loadcell_calibration["offset_final"])
-        # Offset awal: pakai nilai kalibrasi tersimpan. retare() bisa memperbaruinya.
-        self.offset = self.offset_calibration
+            # --- Loadcell ---
+            self.loadcell_calibration = t14.load_loadcell_calibration()
+            self.hx = t14.init_loadcell(self.loadcell_calibration)
+            self.calibration_factor = float(self.loadcell_calibration["calibration_factor"])
+            self.offset_calibration = float(self.loadcell_calibration["offset_final"])
+            # Offset awal: pakai nilai kalibrasi tersimpan. retare() bisa memperbaruinya.
+            self.offset = self.offset_calibration
 
-        # --- Kamera (dibuka SEKALI, tetap hangat) ---
-        cap, device, frame_w, frame_h = t14.open_fixed_camera(t14.FIXED_CAMERA_DEVICE)
-        if cap is None:
-            raise RuntimeError("Kamera gagal dibuka pada inisialisasi sesi.")
-        self.cap = cap
-        self.device = device
-        self.frame_w = frame_w
-        self.frame_h = frame_h
+            # --- Kamera (dibuka SEKALI, tetap hangat) ---
+            cap, device, frame_w, frame_h = t14.open_fixed_camera(t14.FIXED_CAMERA_DEVICE)
+            if cap is None:
+                raise RuntimeError("Kamera gagal dibuka pada inisialisasi sesi.")
+            self.cap = cap
+            self.device = device
+            self.frame_w = frame_w
+            self.frame_h = frame_h
 
-        # --- Kalibrasi kamera + warp + skala ---
-        (self.camera_matrix,
-         self.dist_coeffs,
-         self.new_camera_matrix) = cvsys.load_calibration(frame_w, frame_h)
-        self.points = cvsys.load_points()
-        self.scale = cvsys.load_scale()
-        self.px_per_cm_x = float(self.scale["px_per_cm_x"])
-        self.px_per_cm_y = float(self.scale["px_per_cm_y"])
+            # --- Kalibrasi kamera + warp + skala ---
+            (self.camera_matrix,
+             self.dist_coeffs,
+             self.new_camera_matrix) = cvsys.load_calibration(frame_w, frame_h)
+            self.points = cvsys.load_points()
+            self.scale = cvsys.load_scale()
+            self.px_per_cm_x = float(self.scale["px_per_cm_x"])
+            self.px_per_cm_y = float(self.scale["px_per_cm_y"])
 
-        # --- Sensor point: load dari file (TANPA klik mouse) ---
-        self.sensor_point = self._load_sensor_point()
+            # --- Sensor point: load dari file (TANPA klik mouse) ---
+            self.sensor_point = self._load_sensor_point()
 
-        # --- Background: load dari file (TANPA capture live) ---
-        self.background = self._load_background()
+            # --- Background: load dari file (TANPA capture live) ---
+            self.background = self._load_background()
+        except Exception:
+            # Lepas GPIO + kamera bila init gagal di tengah (mis. NeedCalibration
+            # setelah kamera terbuka) supaya Connect berikutnya tidak gagal.
+            self.close()
+            raise
 
     # -----------------------------------------------------------------
     # Loaders (fail-loud kalau kalibrasi belum ada)
