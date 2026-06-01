@@ -1,0 +1,21 @@
+{
+    "mode": "warp_with_margin",
+    "input_warp_image": "hasil_tahap5_undistorted/area_kerja_warped_undistorted.jpg",
+    "input_warp_info": "hasil_tahap5_undistorted/warp_info.json",
+    "workspace_panjang_cm": 19.0,
+    "workspace_lebar_cm": 15.0,
+    "workspace_width_px": 608,
+    "workspace_height_px": 480,
+    "output_width_px": 800,
+    "output_height_px": 672,
+    "margin_cm": 3.0,
+    "margin_px": 96,
+    "workspace_x0": 96,
+    "workspace_y0": 96,
+    "workspace_x1": 703,
+    "workspace_y1": 575,
+    "px_per_cm_x": 32.0,
+    "px_per_cm_y": 32.0,
+    "cm_per_px_x": 0.03125,
+    "cm_per_px_y": 0.03125
+}

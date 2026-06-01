@@ -1,0 +1,17 @@
+{
+    "timestamp": "2026-05-21 00:38:05",
+    "actual_weight_g": 587.891,
+    "actual_weight_kg": 0.587891,
+    "stable": true,
+    "weight_range_g": 3.974,
+    "weight_min_g": 586.305,
+    "weight_max_g": 590.279,
+    "reading_median_avg": 461.822,
+    "calibration_factor": 423.24999999999994,
+    "offset_final": -126.06851742468992,
+    "dt_pin_bcm": 5,
+    "sck_pin_bcm": 6,
+    "source_calibration_file": "hasil_tahap11/loadcell_calibration.json",
+    "measurement_id": "actual_weight_20260521_003805_473837",
+    "json_file": "hasil_tahap12/archive/actual_weight_20260521_003805_473837.json"
+}

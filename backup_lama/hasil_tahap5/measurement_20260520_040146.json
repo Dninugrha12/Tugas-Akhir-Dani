@@ -1,0 +1,14 @@
+{
+    "panjang_px": 299.0,
+    "lebar_px": 298.0,
+    "panjang_cm": 8.82,
+    "lebar_cm": 8.79,
+    "tinggi_cm": 1.8,
+    "volume_cm3": 139.5,
+    "berat_volumetrik_iata_kg": 0.023,
+    "height_correction": 0.9437,
+    "rumus_iata": "P x L x T / 6000",
+    "jarak_sensor_ke_objek_cm": 30.7,
+    "jarak_sensor_ke_area_cm": 31.5,
+    "timestamp": "20260520_040146"
+}

@@ -1,0 +1,2 @@
+measurement_id,timestamp,panjang_cm,lebar_cm,tinggi_cm,volume_cm3,berat_volumetrik_g,berat_aktual_g,chargeable_weight_g,chargeable_weight_kg,chargeable_source,difference_g,decision_text,json_file
+chargeable_20260521_004119_757330,2026-05-21 00:41:19,12.173,10.681,8.823,1147.292,191.215,212.855,212.855,0.212855,actual,21.64,Berat aktual lebih besar atau sama dengan berat volumetrik.,hasil_tahap13/archive/chargeable_20260521_004119_757330.json

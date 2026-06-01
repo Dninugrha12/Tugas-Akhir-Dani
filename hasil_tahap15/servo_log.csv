@@ -1,0 +1,7 @@
+timestamp,servo_pin,action,standby_angle,push_angle,return_angle,status
+2026-05-27 00:20:17,18,standby,0,90,0,Servo berada di posisi standby.
+2026-05-27 00:20:25,18,standby,0,90,0,Servo ke posisi standby.
+2026-05-27 00:20:43,18,push,0,90,0,Servo bergerak ke posisi dorong.
+2026-05-27 00:20:59,18,return,0,90,0,Servo kembali ke posisi awal.
+2026-05-27 00:21:34,18,cycle_once,0,90,0,Servo menjalankan 1 siklus penuh.
+2026-05-27 00:40:13,18,cleanup,0,90,0,GPIO cleanup selesai.

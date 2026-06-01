@@ -1,0 +1,64 @@
+{
+    "input_image": "hasil_tahap4/workspace_undistorted.jpg",
+    "input_points_json": "hasil_tahap4/points_4_corners_undistorted.json",
+    "points_order": {
+        "1": "kiri_atas",
+        "2": "kanan_atas",
+        "3": "kanan_bawah",
+        "4": "kiri_bawah"
+    },
+    "source_points": [
+        [
+            558.0,
+            348.0
+        ],
+        [
+            1378.0,
+            348.0
+        ],
+        [
+            1380.0,
+            1008.0
+        ],
+        [
+            542.0,
+            1014.0
+        ]
+    ],
+    "destination_points_with_margin": [
+        [
+            96.0,
+            96.0
+        ],
+        [
+            703.0,
+            96.0
+        ],
+        [
+            703.0,
+            575.0
+        ],
+        [
+            96.0,
+            575.0
+        ]
+    ],
+    "workspace_panjang_cm": 19.0,
+    "workspace_lebar_cm": 15.0,
+    "px_per_cm": 32.0,
+    "px_per_cm_x": 32.0,
+    "px_per_cm_y": 32.0,
+    "margin_cm": 3.0,
+    "margin_px": 96,
+    "workspace_width_px": 608,
+    "workspace_height_px": 480,
+    "output_width_px": 800,
+    "output_height_px": 672,
+    "workspace_x0": 96,
+    "workspace_y0": 96,
+    "workspace_x1": 703,
+    "workspace_y1": 575,
+    "output_warped_image": "hasil_tahap5_undistorted/area_kerja_warped_undistorted.jpg",
+    "output_source_points_image": "hasil_tahap5_undistorted/source_with_points.jpg",
+    "output_preview_image": "hasil_tahap5_undistorted/before_after_warp.jpg"
+}

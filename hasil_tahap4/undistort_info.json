@@ -1,0 +1,9 @@
+{
+    "camera_device": "/dev/video0",
+    "frame_width": 1920,
+    "frame_height": 1080,
+    "calibration_file": "camera_calibration.npz",
+    "raw_image": "hasil_tahap4/workspace_raw.jpg",
+    "undistorted_image": "hasil_tahap4/workspace_undistorted.jpg",
+    "preview_image": "hasil_tahap4/undistort_preview.jpg"
+}

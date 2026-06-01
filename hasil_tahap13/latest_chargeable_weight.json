@@ -1,0 +1,21 @@
+{
+    "timestamp": "2026-05-21 00:41:19",
+    "panjang_cm": 12.173,
+    "lebar_cm": 10.681,
+    "tinggi_cm": 8.823,
+    "volume_cm3": 1147.292,
+    "berat_volumetrik_g": 191.215,
+    "berat_volumetrik_kg": 0.191215,
+    "berat_aktual_g": 212.855,
+    "berat_aktual_kg": 0.212855,
+    "chargeable_weight_g": 212.855,
+    "chargeable_weight_kg": 0.212855,
+    "chargeable_source": "actual",
+    "difference_g": 21.64,
+    "decision_text": "Berat aktual lebih besar atau sama dengan berat volumetrik.",
+    "source_volumetric_file": "hasil_tahap10/latest_measurement.json",
+    "source_actual_weight_file": "hasil_tahap12/latest_actual_weight.json",
+    "formula": "chargeable_weight_g = max(berat_volumetrik_g, berat_aktual_g)",
+    "measurement_id": "chargeable_20260521_004119_757330",
+    "json_file": "hasil_tahap13/archive/chargeable_20260521_004119_757330.json"
+}

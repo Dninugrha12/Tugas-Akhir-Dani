@@ -1,0 +1,10 @@
+{
+    "timestamp": "2026-05-27 00:40:13",
+    "servo_pin": 18,
+    "action": "cleanup",
+    "standby_angle": 0,
+    "push_angle": 90,
+    "return_angle": 0,
+    "status": "GPIO cleanup selesai.",
+    "note": "Tahap 15 test servo MG996R untuk mekanik rack & pinion."
+}
